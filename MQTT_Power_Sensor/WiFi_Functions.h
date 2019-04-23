@@ -1,6 +1,6 @@
 
 /*
- * WiFi and serial setup and operations
+ * WiFi, MQTT and Serial setup and operations
  */
 
 // Initialize the serial port
@@ -85,19 +85,19 @@ void Connect_To_Any_Known_WiFi() {
   while (WiFi.status() != WL_CONNECTED) {
 
     if ((WiFi.status() != WL_CONNECTED) && (SSID_1 != NULL) && (Password_1 != NULL)) {
-      Serial.print("Trying 1 - "); WiFi_Startup(SSID_1, Password_1);      // WiFi start
+      Serial.print("Trying slot 1 - "); WiFi_Startup(SSID_1, Password_1);      // WiFi start
     }
 
     if ((WiFi.status() != WL_CONNECTED) && (SSID_2 != NULL) && (Password_2 != NULL)) {
-      Serial.print("Trying 2 - "); WiFi_Startup(SSID_2, Password_2);      // WiFi start
+      Serial.print("Trying slot 2 - "); WiFi_Startup(SSID_2, Password_2);      // WiFi start
     }
 
     if ((WiFi.status() != WL_CONNECTED) && (SSID_3 != NULL) && (Password_3 != NULL)) {
-      Serial.print("Trying 3 - "); WiFi_Startup(SSID_3, Password_3);      // WiFi start
+      Serial.print("Trying slot 3 - "); WiFi_Startup(SSID_3, Password_3);      // WiFi start
     }
 
     if ((WiFi.status() != WL_CONNECTED) && (SSID_4 != NULL) && (Password_4 != NULL)) {
-      Serial.print("Trying 4 - "); WiFi_Startup(SSID_4, Password_4);      // WiFi start
+      Serial.print("Trying slot 4 - "); WiFi_Startup(SSID_4, Password_4);      // WiFi start
     }
 
     if (WiFi.status() != WL_CONNECTED) {
@@ -109,6 +109,42 @@ void Connect_To_Any_Known_WiFi() {
 } // End of Connect_To_Any_Known_WiFi
 
 
+void reconnect() {
+  // Loop until we're reconnected
+  // (or until the watchdog bites)
+  while (!psClient.connected()) {
+
+    if (WiFi.status() != WL_CONNECTED) {
+      Connect_To_Any_Known_WiFi();
+    }
+
+    Serial.print("Attempting MQTT Broker connection...");
+    // Attempt to connect
+
+    // Make MAC address array used for Client ID
+    char MAC_array[My_MAC.length()];
+    My_MAC.toCharArray(MAC_array, (My_MAC.length() + 1));
+
+    // Connect client and use MAC address array as the Client ID
+    if (psClient.connect(MAC_array, mqtt_username, mqtt_password)) {
+
+      Serial.println("connected");
+      Serial.print("This is the client ID used: "); Serial.println(MAC_array);
+
+      // Once connected, publish an announcement...
+      Report_Requested = true;   // Request a report after power up
+
+    } else {
+      Serial.print("Failed, rc=");
+      Serial.print(psClient.state());
+      Serial.println(" Trying again in 5 seconds");
+      // Wait 5 seconds before retrying
+      delay(5000);
+    }
+  }
+} // End of reconnect
+
+
 // Compose a payload to return as required
 // The payload and headers cannot exceed 128 bytes!
 String Build_Payload()  {
@@ -117,7 +153,6 @@ String Build_Payload()  {
   return String("") + "{" +
       "\"current\":\"" + RMSCurrent + "A\"," +
       "\"power\":\"" + RMSPower + "W\"," +
-      "\"peak\":\"" + PeakPower + "W\"," +
       "\"energy\":\"" + Kilos + "KWh\"," +
     //"\"MAC\":\"" + My_MAC + "\"," +
     //"\"SSID\":\"" + WiFi_SSID + "\"," +

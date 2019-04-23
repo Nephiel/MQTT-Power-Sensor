@@ -80,17 +80,17 @@ void loop() {
     Status_LED_Off;
     ReadPower();
     Status_LED_On;
-    Serial.println(String(RMSCurrent) + "A " + RMSPower + "W " + Kilos + "KWh " + PeakPower + "W");
+    Serial.println(String(RMSCurrent) + "A " + RMSPower + "W " + Kilos + "KWh");
 
     // Get a payload and build a char array
     String Payload = Build_Payload();
     char Payload_array[(Payload.length() + 1)];
     Payload.toCharArray(Payload_array, (Payload.length() + 1));
 
-    Serial.println(String("") + "Publishing to topic: " + InStatus + " - Payload: " + Payload_array);
+    Serial.println(String("") + "Publishing to topic: " + mqtt_topic + " - Payload: " + Payload_array);
 
     // Publish a MQTT message with the payload
-    if (psClient.publish(InStatus, Payload_array)) {
+    if (psClient.publish(mqtt_topic, Payload_array)) {
       // Clear watchdog
       watchdogCount = 0;
     } else {
@@ -99,7 +99,7 @@ void loop() {
 
     /*
     // WIP: for large messages (over 128 bytes including headers)
-    psClient.beginPublish(InStatus, (Payload.length() + 1), false);
+    psClient.beginPublish(mqtt_topic, (Payload.length() + 1), false);
 
     for (int c = 0 ; c < Payload.length() ; c++) {
       psClient.write(Payload_array[c]);
@@ -107,13 +107,6 @@ void loop() {
 
     if (psClient.endPublish()) {
       // clear watchdog, etc.
-    }
-    */
-
-    /*
-    if (Event == "REBOOT") {
-      Serial.println("Rebooting...");
-      ESP.restart();
     }
     */
 

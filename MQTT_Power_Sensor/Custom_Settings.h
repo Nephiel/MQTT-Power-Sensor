@@ -30,8 +30,7 @@ const char* mqtt_username = NULL;
 const char* mqtt_password = NULL;
 
 // MQTT Topics
-const char* InStatus = "Power/Status";
-const char* InControl = "Power/Control";
+const char* mqtt_topic = "Power/Status";
 
 String Broadcast_All = "*ALL";                    // Message used to broadcast to all devices subscribed to above topic
 
@@ -51,7 +50,6 @@ String WiFi_SSID = "None";                        // SSID string
 String My_MAC = "";                               // MAC address, to be read from ESP8266
 char MAC_array[13] = "000000000000";              // MAC definition to use as Client ID
 volatile bool Report_Requested = false;           // Set to true if report required
-//String Event = "Boot";                          // Default
 
 // I/O
 #define Status_LED 2                              // D4
@@ -62,7 +60,6 @@ volatile bool Report_Requested = false;           // Set to true if report requi
 double Kilos = 0;
 double RMSCurrent = 0;
 int RMSPower = 0;
-int PeakPower = 0;
 
 // Read information from CT
 void ReadPower() {
@@ -93,9 +90,6 @@ void ReadPower() {
   // http://www.referencedesigner.com/rfcal/cal_04.php
   RMSCurrent = ((MaxCurrent - MedCurrent) * 0.707) / Calib;    // Calculates RMS current based on maximum value and scales according to calibration
   int RMSPower = 230 * RMSCurrent;    // Calculates RMS Power assuming voltage is 230VAC
-  if (RMSPower > PeakPower) {
-    PeakPower = RMSPower;
-  }
 
   unsigned long kTime = millis() - StartMillis;
   Kilos = Kilos + ((double)RMSPower * ((double)kTime/60/60/1000000)); // Calculates kilowatt hours used
