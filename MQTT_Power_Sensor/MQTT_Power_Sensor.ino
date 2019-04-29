@@ -19,7 +19,7 @@ double kiloWattHours = 0;                   // Measured energy in KWh
 double rmsCurrent = 0;                      // Measured current in A
 int rmsPower = 0;                           // Measured power in W
 
-#include "Custom_Settings.h"                // Custom Wifi connection and details.
+#include "Custom_Settings.h"                // Connection details and customizable variables
 
 // I/O
 #define Status_LED 2 // D4
@@ -43,40 +43,59 @@ void ISRwatchdog() {
 
 // Read information from CT
 void ReadPower() {
+  ReadPower(false); // do not show calibrate by default
+}
+void ReadPower(bool printCalibrationInfo) {
   int actualCurrent = 0;
   int maxCurrent = 0;
-  int medCurrent = 511; // AnalogRead value of the Zero line. Default is 511 (midway between 0 and 1023). Change this value to calibrate
-  int minCurrent = 1023;
+
+  // Needs to sample for at least one and half mains cycles (> 30mS at 50Hz), and the Wemos D1 takes aprox 0.15ms per sample
+  int numSamples = 1000/mainsFreq * 1.5 / 0.15;
 
   unsigned long startMillis = millis();
-
-  // Needs to sample for at least one and half mains cycles or > 30mS
-  for (int j = 0 ; j <= 600 ; j++)
+  for (int j = 0 ; j <= numSamples ; j++)
   {
     // Read A/D input and record maximum and minimum current
     actualCurrent = analogRead(A0);
     if (actualCurrent >= maxCurrent) {
       maxCurrent = actualCurrent;
-    } else if (actualCurrent <= minCurrent) {
-      minCurrent = actualCurrent;
     }
   } // End of samples loop
+  unsigned long sampledTime = millis() - startMillis;
 
   // Throw out the negative half of the AC sine wave
-  if (maxCurrent < medCurrent) {
-    maxCurrent = medCurrent;
+  if (maxCurrent < calibZero) {
+    maxCurrent = calibZero;
+  }
+
+  // Print calibration info if requested
+  if (printCalibrationInfo) {
+    Serial.println("------ Calibration Info ----------------------");
+    Serial.println("mainsFreq = " + String(mainsFreq) +
+                   ", numSamples = " + String(numSamples) +
+                   ", sampledTime = " + String(sampledTime) +
+                   ", maxCurrent = " + String(maxCurrent) +
+                   ", actualCurrent = " + String(actualCurrent) +
+                   ", calibZero = " + String(calibZero)
+                  );
+    if (sampledTime < (1000/mainsFreq*1.5)) {
+      Serial.println("Warning: numSamples is not enough for the given mainsFreq.");
+    }
+    if (actualCurrent > (calibZero + 5)) {
+      Serial.println("Assuming no current is passing through the CT, to calibrate, try setting calibZero to a *higher* value (closer to actualCurrent).");
+    } else if (actualCurrent < (calibZero - 5)) {
+      Serial.println("Assuming no current is passing through the CT, to calibrate, try setting calibZero to a *lower* value (closer to actualCurrent).");
+    }
+    Serial.println(String("------ End Calibration Info ------------------"));
   }
 
   // http://www.referencedesigner.com/rfcal/cal_04.php
-  rmsCurrent = ((maxCurrent - medCurrent) * 0.707) / calib;    // Calculates RMS current based on maximum value and scales according to calibration
-  int rmsPower = mainsVoltage * rmsCurrent;    // Calculates RMS Power
+  rmsCurrent = ((maxCurrent - calibZero) * 0.707) / calibRMS; // Calculates RMS current based on maximum value and scales according to calibration
+  rmsPower = mainsVoltage * rmsCurrent;                       // Calculates RMS Power
 
-  unsigned long kTime = millis() - startMillis;
-  kiloWattHours = kiloWattHours + ((double)rmsPower * ((double)kTime/60/60/1000000)); // Calculates kilowatt hours used
+  kiloWattHours = kiloWattHours + ((double)rmsPower * ((double)sampledTime/60/60/1000000)); // Calculates kilowatt hours used since last reboot
 
-  //delay(2000);
-
-} // End of function
+} // End of ReadPower
 
 // Initial setup
 void setup(void) {
@@ -94,6 +113,8 @@ void setup(void) {
   psClient.setServer(mqtt_server, mqtt_port); // Set the MQTT server and port
   
   ms_since_last_message = millis();           // Reset time since sending last message
+
+  ReadPower(true);                            // Measure current once, displaying calibration info
 
   Serial.println("Setup finished");
 } // End of setup
@@ -141,21 +162,8 @@ void loop() {
       Serial.println("Something went wrong, unable to publish.");
     }
 
-    /*
-    // WIP: for large messages (over 128 bytes including headers)
-    psClient.beginPublish(mqtt_topic, (Payload.length() + 1), false);
-
-    for (int c = 0 ; c < Payload.length() ; c++) {
-      psClient.write(Payload_array[c]);
-    }
-
-    if (psClient.endPublish()) {
-      // clear watchdog, etc.
-    }
-    */
-
-    // Sleep for at least 3/4ths of the time
-    delay(3/4 * message_interval);
+    // Sleep at least half the time.
+    delay(1/2 * message_interval);
 
   } // End of messages timer
 

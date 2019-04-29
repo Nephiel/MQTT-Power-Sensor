@@ -139,7 +139,7 @@ void reconnect() {
     if (psClient.connect(MAC_as_client_id, mqtt_username, mqtt_password, 
                          lwTopic, lwQoS, lwRetain, lwPayload, cleanSession)) {
 
-      Serial.println(" connected using client ID: " + My_MAC);
+      Serial.println(" connected using client ID: " + String(My_MAC));
 
       // Once connected, publish an announcement...
       birthMsgRequested = true;   // Request a birth report after connection

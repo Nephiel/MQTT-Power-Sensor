@@ -34,14 +34,19 @@ const char* mqtt_password = NULL;
 const char* mqtt_topic = "Power/Status";
 
 // Mains voltage and calibration
-double calib = 10;                     // RMS Power correction. Default is 10. Change this value to calibrate
-const int mainsVoltage = 230;          // Mains voltage in Volts. Change this value according to your setup
+const double calibRMS = 2.6666;        // RMS Power correction. Change this value to calibrate.
+                                       // Default is 10.00. On my sensor board, a value of 2.6666 matched a 60W incandescent bulb.
+const int calibZero = 545;             // AnalogRead value when there is no current (i.e. when the CT is not clamped around any wire).
+                                       // Default is (1023-0)/2 = 511. Change this value to calibrate.
+                                       // My sensor board read 545, the same as with the CT jack unplugged. YMMV.
+const int mainsVoltage = 230;          // Mains voltage in Volts. Change this value according to your mains.
+const int mainsFreq = 50;              // Mains frequency in Hertz. Change this value according to your mains.
 
 // Message timing
 int message_count = 0;                 // Counter of messages sent
 long ms_since_last_message = 0;        // Time elapsed since last message was sent, in ms
-#define max_message_count 99           // Max value of counter of messages sent. Will wrap back to 0 after this value.
-#define message_interval 5000          // Time in ms between each message. 5000 ms = 5 seconds
+const int max_message_count = 99;      // Max value of counter of messages sent. Will wrap back to 0 after this value.
+const int message_interval = 5000;     // Time in ms between each message. 5000 ms = 5 seconds
 
 // Watchdog timing
 volatile int watchdogTimeout = 300;    // Time in seconds before watchdog times out, 300 seconds = 5 minutes
