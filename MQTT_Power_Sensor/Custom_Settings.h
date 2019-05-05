@@ -34,8 +34,7 @@ const char* mqtt_password = NULL;
 const char* mqtt_topic = "Power/Status";
 
 // Mains voltage and calibration
-const double calibRMS = 2.6666;        // RMS Power correction. Change this value to calibrate.
-                                       // Default is 10.00. On my sensor board, a value of 2.6666 matched a 60W incandescent bulb.
+const double calibRMS = 3.3877083;     // RMS Power correction. Default is 10.00. Change this value to calibrate.
 const int calibZero = 545;             // AnalogRead value when there is no current (i.e. when the CT is not clamped around any wire).
                                        // Default is (1023-0)/2 = 511. Change this value to calibrate.
                                        // My sensor board read 545, the same as with the CT jack unplugged. YMMV.

@@ -47,6 +47,7 @@ void ReadPower() {
 }
 void ReadPower(bool printCalibrationInfo) {
   int actualCurrent = 0;
+  //int minCurrent = 1023;
   int maxCurrent = 0;
 
   // Needs to sample for at least one and half mains cycles (> 30mS at 50Hz), and the Wemos D1 takes aprox 0.15ms per sample
@@ -57,11 +58,23 @@ void ReadPower(bool printCalibrationInfo) {
   {
     // Read A/D input and record maximum and minimum current
     actualCurrent = analogRead(A0);
-    if (actualCurrent >= maxCurrent) {
+    if (actualCurrent > maxCurrent) {
       maxCurrent = actualCurrent;
     }
+    /*
+    if (actualCurrent < minCurrent) {
+      minCurrent = actualCurrent;
+    }
+    */
   } // End of samples loop
   unsigned long sampledTime = millis() - startMillis;
+
+  /*
+  Serial.println("minCurrent = " + String(minCurrent) +
+                 ", actualCurrent = " + String(actualCurrent) +
+                 ", maxCurrent = " + String(maxCurrent)
+                );
+  */
 
   // Throw out the negative half of the AC sine wave
   if (maxCurrent < calibZero) {
@@ -93,7 +106,7 @@ void ReadPower(bool printCalibrationInfo) {
   rmsCurrent = ((maxCurrent - calibZero) * 0.707) / calibRMS; // Calculates RMS current based on maximum value and scales according to calibration
   rmsPower = mainsVoltage * rmsCurrent;                       // Calculates RMS Power
 
-  kiloWattHours = kiloWattHours + ((double)rmsPower * ((double)sampledTime/60/60/1000000)); // Calculates kilowatt hours used since last reboot
+  kiloWattHours = kiloWattHours + ((double)rmsPower * ((double)sampledTime/3600000000)); // Calculates kilowatt hours used since last reboot. 3600000000 = 60*60*1000*1000
 
 } // End of ReadPower
 
